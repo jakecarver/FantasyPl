@@ -93,40 +93,45 @@ def fixScraper (EMAIL, PASSWORD):
         #Load Squad
         element = WebDriverWait(driver, 50).until( EC.presence_of_element_located((By.ID, "loadSquad")))
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.ID, "loadSquad"))).click()
+        
         driver.get('https://www.fantasyfootballfix.com/price/')
 
-        #Wait for table to generate
-        element = WebDriverWait(driver, 50).until( EC.presence_of_element_located((By.ID, "playerPriceAll")))
         
-        #Attempt to navigate to correct page of the table, clicking for each page number
-        try:
-            for i in range (0, page):
-                WebDriverWait(driver, 50).until(EC.presence_of_element_located((By.XPATH, "//*[@id=\"playerPriceAll_paginate\"]/ul/li[7]/a")))
-                WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//*[@id=\"playerPriceAll_paginate\"]/ul/li[7]/a"))).click()
         
-        #On failure, exit process. Once there are no more pages of data to visit, the process will enter here and output to csv
-        except: 
-            print ('Click Failure')
-            break
-
         #Wait till rows have generated
         element = WebDriverWait(driver, 50).until(EC.presence_of_element_located((By.CSS_SELECTOR, "#playerPriceAll tr")))
 
         #Wait until the "loading" row has disappeared
-        while (driver.find_elements_by_css_selector("#playerPriceAll dataTables_empty")):
-            print('wait')
+        while (True):
+            
             driver.implicitly_wait(1)
-
-        #Wait a little longer just in case only half of the table loaded (no good way to verify if table is full)
-        driver.implicitly_wait(5)
-
-        #Generate new soup, table element, and list of rows
-        soup = BeautifulSoup(driver.page_source, 'lxml')
-        table = soup.find( id ='playerPriceAll')
-        rows = table.select("tbody > tr")
-        print (rows)
+            #Generate new soup, table element, and list of rows
+            soup = BeautifulSoup(driver.page_source, 'lxml')
+            table = soup.find( id ='playerPriceAll')
+            rows = table.select("tbody > tr")
+            if  not rows[0].select('.dataTables_empty'):
+                break
+        iters = len(rows)
         #For every row
-        for i in range (0, len(rows)):
+        for i in range (0, iters):
+            driver.get('https://www.fantasyfootballfix.com/price/')
+
+        
+        
+            #Wait till rows have generated
+            element = WebDriverWait(driver, 50).until(EC.presence_of_element_located((By.CSS_SELECTOR, "#playerPriceAll tr")))
+
+            #Wait until the "loading" row has disappeared
+            while (True):
+                
+                driver.implicitly_wait(1)
+                #Generate new soup, table element, and list of rows
+                soup = BeautifulSoup(driver.page_source, 'lxml')
+                table = soup.find( id ='playerPriceAll')
+                rows = table.select("tbody > tr")
+                if  not rows[0].select('.dataTables_empty'):
+                    break
+
 
             #Data to be output into dataframe
             data = {}
@@ -153,6 +158,8 @@ def fixScraper (EMAIL, PASSWORD):
                 df.append(data, ignore_index=True)
                 break    
             
+            
+
             #Wait for the new page table to load
             element = WebDriverWait(driver, 50).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "#playerPriceAll tr"))
@@ -163,9 +170,11 @@ def fixScraper (EMAIL, PASSWORD):
                 driver.implicitly_wait(1)
 
             #Open popup table
-            driverRows = driver.find_elements_by_css_selector('#playerPriceAll tr')
+            driverRows = driver.find_elements_by_css_selector('#playerPriceAll > tbody > tr')
+            print (driverRows[i].text)
             moreInfo = driverRows[i].find_element_by_tag_name('a').click()
 
+            print('entering try')
             #Scraping the popup table
             try:
                 #Wait until the appropriate tab appears
@@ -180,6 +189,8 @@ def fixScraper (EMAIL, PASSWORD):
                 element = WebDriverWait(driver, 50).until(
                     EC.presence_of_element_located((By.ID, "fixturetable"))
                 )
+
+                print('clicked correctly')
 
                 #Create a new soup from table
                 newSoup = BeautifulSoup(driver.page_source, 'lxml')
