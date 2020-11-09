@@ -199,9 +199,12 @@ def fixScraper (EMAIL, PASSWORD):
             #Return error if popup scraping fails
             except:
                 print ("ERROR")
-                #Initialize dataframe
+
+                #Empty dataframe on failure, so nothing is written to csv
                 df = pd.DataFrame([], columns=['Name','Position','Team','CV',
                 'week1','week2','week3','week4','week5','week6'])
+
+                #De-incriment so we try the same page next time
                 page -= 1
         #Once all rows on table page are completed, iterate page and close current driver
         page += 1
