@@ -113,19 +113,20 @@ def fixScraper (EMAIL, PASSWORD):
         element = WebDriverWait(driver, 50).until(EC.presence_of_element_located((By.CSS_SELECTOR, "#playerPriceAll tr")))
 
         #Wait until the "loading" row has disappeared
-        while (driver.find_elements_by_class_name("dataTables_empty")):
-                driver.implicitly_wait(1)
+        while (driver.find_elements_by_css_selector("#playerPriceAll dataTables_empty")):
+            print('wait')
+            driver.implicitly_wait(1)
 
         #Wait a little longer just in case only half of the table loaded (no good way to verify if table is full)
-        driver.implicitly_wait(3)
+        driver.implicitly_wait(5)
 
         #Generate new soup, table element, and list of rows
         soup = BeautifulSoup(driver.page_source, 'lxml')
         table = soup.find( id ='playerPriceAll')
-        rows = table.find_all("tr")
-        
+        rows = table.select("tbody > tr")
+        print (rows)
         #For every row
-        for i in range (1, len(rows)):
+        for i in range (0, len(rows)):
 
             #Data to be output into dataframe
             data = {}
