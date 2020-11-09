@@ -59,15 +59,17 @@ def fixScraper (EMAIL, PASSWORD):
     #End driver instance
     driver.quit()
 
-    #Initialize dataframe
-    df = pd.DataFrame([], columns=['Name','Position','Team','CV',
-        'week1','week2','week3','week4','week5','week6'])
+    
     
     #Initialize page count
     page = 0
 
     #For every page in the table
     while True:
+        #Initialize dataframe
+        df = pd.DataFrame([], columns=['Name','Position','Team','CV',
+        'week1','week2','week3','week4','week5','week6'])
+
         #print page number
         print('PAGE: '+str(page))
 
@@ -197,14 +199,18 @@ def fixScraper (EMAIL, PASSWORD):
             #Return error if popup scraping fails
             except:
                 print ("ERROR")
-                driver.quit()
+                #Initialize dataframe
+                df = pd.DataFrame([], columns=['Name','Position','Team','CV',
+                'week1','week2','week3','week4','week5','week6'])
+                page -= 1
         #Once all rows on table page are completed, iterate page and close current driver
         page += 1
+        df.to_csv('out.csv', mode='a',index=False)  
         driver.quit()
 
     #Create csv and end    
-    df.to_csv('out.csv', index=False)  
-    driver.quit()
+    #df.to_csv('out.csv', index=False)  
+    #driver.quit()
 
 
 fixScraper(sys.argv[1], sys.argv[2])
