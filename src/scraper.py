@@ -113,18 +113,19 @@ def fixScraper (EMAIL, PASSWORD):
         element = WebDriverWait(driver, 50).until(EC.presence_of_element_located((By.CSS_SELECTOR, "#playerPriceAll tr")))
 
         #Wait until the "loading" row has disappeared
-        while (driver.find_elements_by_css_selector("#playerPriceAll dataTables_empty")):
-            print('wait')
-            driver.implicitly_wait(1)
+        while (True):
+            soup = BeautifulSoup(driver.page_source, 'lxml')
+            table = soup.find( id ='playerPriceAll')
+            rows = table.select("tbody > tr")
+            if 'Loading' not in rows[0].getText():
+                break
+            driver.implicitly_wait(2)
 
-        #Wait a little longer just in case only half of the table loaded (no good way to verify if table is full)
-        driver.implicitly_wait(5)
 
         #Generate new soup, table element, and list of rows
         soup = BeautifulSoup(driver.page_source, 'lxml')
         table = soup.find( id ='playerPriceAll')
         rows = table.select("tbody > tr")
-        print (rows)
         #For every row
         for i in range (0, len(rows)):
 
@@ -159,12 +160,12 @@ def fixScraper (EMAIL, PASSWORD):
                 )
             
             #Wait for "loading" row to disappear
-            while (driver.find_elements_by_xpath("//playerPriceAll[contains(text(),'Loading')]")):
+            while (driver.find_elements_by_xpath("//table[@id = 'playerPriceAll' and contains(text(),'Loading')]")):
                 driver.implicitly_wait(1)
 
             #Open popup table
             driverRows = driver.find_elements_by_css_selector('#playerPriceAll tr')
-            moreInfo = driverRows[i].find_element_by_tag_name('a').click()
+            moreInfo = driverRows[i+1].find_element_by_tag_name('a').click()
 
             #Scraping the popup table
             try:
@@ -172,15 +173,12 @@ def fixScraper (EMAIL, PASSWORD):
                 element = WebDriverWait(driver, 50).until(
                     EC.presence_of_element_located((By.ID, "fixturetab"))
                 )
-
                 #Click on tab
                 driver.find_element_by_id('fixturetab').click()
-
                 #Wait for table to appear
                 element = WebDriverWait(driver, 50).until(
                     EC.presence_of_element_located((By.ID, "fixturetable"))
                 )
-
                 #Create a new soup from table
                 newSoup = BeautifulSoup(driver.page_source, 'lxml')
                 innerTable = newSoup.find( id ='fixturetable')
