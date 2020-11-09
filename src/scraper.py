@@ -81,12 +81,18 @@ def fixScraper (EMAIL, PASSWORD):
         driver = webdriver.Chrome(ChromeDriverManager().install())
         
         driver.get('https://www.fantasyfootballfix.com/price/')
+
+        #Enter Email
         element = WebDriverWait(driver, 50).until( EC.presence_of_element_located((By.ID, "id_email")))
         email = driver.find_element_by_id('id_email').send_keys(EMAIL)
+
+        #Enter password
         element = WebDriverWait(driver, 50).until( EC.presence_of_element_located((By.ID, "id_password1")))
         password = driver.find_element_by_id('id_password1').send_keys(PASSWORD)
+
+        #Load Squad
+        element = WebDriverWait(driver, 50).until( EC.presence_of_element_located((By.ID, "loadSquad")))
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.ID, "loadSquad"))).click()
-        login = driver.find_element_by_id('loadSquad').click()
         driver.get('https://www.fantasyfootballfix.com/price/')
 
         #Wait for table to generate
