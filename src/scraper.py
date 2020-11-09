@@ -206,6 +206,7 @@ def fixScraper (EMAIL, PASSWORD):
 
                 #De-incriment so we try the same page next time
                 page -= 1
+                break
         #Once all rows on table page are completed, iterate page and close current driver
         page += 1
         df.to_csv('out.csv', mode='a',index=False)  
