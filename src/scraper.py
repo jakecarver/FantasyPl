@@ -1,3 +1,10 @@
+"""
+Scrapes www.fantasyfootballfix.com for fantasy football (Premier League) prediction data.
+When run from terminal, requires fantasyfootballfix email and password to use.
+
+Author: Jake Carver
+"""
+
 from selenium import webdriver
 import pandas as pd
 from webdriver_manager.chrome import ChromeDriverManager
