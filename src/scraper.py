@@ -1,6 +1,6 @@
 """
 Scrapes www.fantasyfootballfix.com for fantasy football (Premier League) prediction data.
-When run from terminal, requires fantasyfootballfix email and password to use.
+When run from terminal, requires fantasyfootballfix email and password as arguments to use.
 
 Author: Jake Carver
 """
@@ -72,6 +72,7 @@ def fixScraper (EMAIL, PASSWORD):
         print('PAGE: '+str(page))
 
         #Create new driver  instance and login (same as before)
+        #Driver restart is an attempt to avoid the server dropping our connection
         driver = webdriver.Chrome(ChromeDriverManager().install())
         driver.get('https://www.fantasyfootballfix.com/price/')
         email = driver.find_element_by_id('id_email').send_keys(EMAIL)
@@ -80,9 +81,7 @@ def fixScraper (EMAIL, PASSWORD):
         driver.get('https://www.fantasyfootballfix.com/price/')
 
         #Wait for table to generate
-        element = WebDriverWait(driver, 50).until(
-                    EC.presence_of_element_located((By.ID, "playerPriceAll"))
-                )
+        element = WebDriverWait(driver, 50).until( EC.presence_of_element_located((By.ID, "playerPriceAll")))
         
         #Attempt to navigate to correct page of the table, clicking for each page number
         try:
@@ -96,9 +95,8 @@ def fixScraper (EMAIL, PASSWORD):
             break
 
         #Wait till rows have generated
-        element = WebDriverWait(driver, 50).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "#playerPriceAll tr"))
-                )
+        element = WebDriverWait(driver, 50).until(EC.presence_of_element_located((By.CSS_SELECTOR, "#playerPriceAll tr")))
+
         #Wait until the "loading" row has disappeared
         while (driver.find_elements_by_class_name("dataTables_empty")):
                 driver.implicitly_wait(1)
