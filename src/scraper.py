@@ -70,6 +70,9 @@ def fixScraper (EMAIL, PASSWORD):
         df = pd.DataFrame([], columns=['Name','Position','Team','CV',
         'week1','week2','week3','week4','week5','week6'])
 
+        #Output Data list, to be put into dataframe
+        dataList = []
+
         #print page number
         print('PAGE: '+str(page))
 
@@ -191,11 +194,10 @@ def fixScraper (EMAIL, PASSWORD):
                     innerCells = innerRows[k].find_all("td")
                     data['week'+str(k)]=float(innerCells[innerColDict['Points']].getText().replace(' ',''))
                 
-                print (data)
+                
+                #Add data to list
+                dataList.append(data)
 
-                #Add data to dataframe
-                df.append(data, ignore_index=True)
-            
             #Return error if popup scraping fails
             except:
                 print ("ERROR")
@@ -209,7 +211,8 @@ def fixScraper (EMAIL, PASSWORD):
                 break
         #Once all rows on table page are completed, iterate page and close current driver
         page += 1
-        df.to_csv('out.csv', mode='a',index=False)  
+        df = pd.DataFrame(dataList)    
+        df.to_csv('out.csv', mode='a',index=False, header=False)  
         driver.quit()
 
     #Create csv and end    
