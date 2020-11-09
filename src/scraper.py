@@ -15,22 +15,22 @@ def fixScraper (EMAIL, PASSWORD):
     driver = webdriver.Chrome(ChromeDriverManager().install())
     driver.get('https://www.fantasyfootballfix.com/price/')
     print(driver.page_source)
-    
-
     email = driver.find_element_by_id('id_email').send_keys(EMAIL)
     password = driver.find_element_by_id('id_password1').send_keys(PASSWORD)
-    password = driver.find_element_by_id('loadSquad').click()
+    login = driver.find_element_by_id('loadSquad').click()
     
     driver.get('https://www.fantasyfootballfix.com/price/')
-    
-    time.sleep(5)
+
+    element = WebDriverWait(driver, 50).until(
+                    EC.presence_of_element_located((By.ID, "playerPriceAll"))
+                )
     soup = BeautifulSoup(driver.page_source, 'lxml')
     #table = soup.find_all( id ='playerPriceAll')[0]
     table = soup.find( id ='playerPriceAll')
-    print (table)
+    
     cols = table.find_all("th")
     df = pd.DataFrame([], columns=['Name','Position','Team','CV',
-        'week1','week2','week3','week4','week5'])
+        'week1','week2','week3','week4','week5','week6'])
     colDict = {}
     for i in range (0,len(cols)):
         if cols[i].getText() == 'Name':
@@ -41,40 +41,91 @@ def fixScraper (EMAIL, PASSWORD):
             colDict['Team'] = i
         elif cols[i].getText() == 'CV':
             colDict['CV'] = i
-    print (colDict)
     
     innerColDict = {}
-
-
-
-
     rows = table.find_all("tr")
-    driverTable = driver.find_element_by_id('playerPriceAll')
-    driverRows = driverTable.find_elements_by_tag_name('tr')
+    driver.quit()
 
-
+    page = 0
     while True:
-        for i in range (1, len(driverRows)):
+        print('PAGE: '+str(page))
+        driver.get('https://www.fantasyfootballfix.com/price/')
+        email = driver.find_element_by_id('id_email').send_keys(EMAIL)
+        password = driver.find_element_by_id('id_password1').send_keys(PASSWORD)
+        login = driver.find_element_by_id('loadSquad').click()
+        
+        driver.get('https://www.fantasyfootballfix.com/price/')
+        element = WebDriverWait(driver, 50).until(
+                    EC.presence_of_element_located((By.ID, "playerPriceAll"))
+                )
+        
+        try:
+            for i in range (0, page):
+                WebDriverWait(driver, 50).until(EC.presence_of_element_located((By.XPATH, "//*[@id=\"playerPriceAll_paginate\"]/ul/li[7]/a")))
+                WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//*[@id=\"playerPriceAll_paginate\"]/ul/li[7]/a"))).click()
+                
+        except: 
+            print ('Click Failure')
+            break
+        element = WebDriverWait(driver, 50).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "#playerPriceAll tr"))
+                )
+        while (driver.find_elements_by_xpath("//playerPriceAll[contains(text(),'Loading')]")):
+                driver.implicitly_wait(1)
+        #Wait a little longer just in case only half of the table loaded
+        driver.implicitly_wait(3)
+        soup = BeautifulSoup(driver.page_source, 'lxml')
+        table = soup.find( id ='playerPriceAll')
+        rows = table.find_all("tr")
+        
+        
+        for i in range (1, len(rows)):
+
             data = {}
             
             cells = rows[i].find_all("td")
-            
             data['Name']=cells[colDict['Name']].getText().replace(' ','')
             
             data['Position']=cells[colDict['Position']].getText()
             data['Team']=cells[colDict['Team']].getText()
             data['CV']=float(cells[colDict['CV']].getText())
+
+            driver.get('https://www.fantasyfootballfix.com/price/')
+            
+            try:
+                for q in range (0, page):
+                    
+                    WebDriverWait(driver, 50).until(EC.presence_of_element_located((By.XPATH, "//*[@id=\"playerPriceAll_paginate\"]/ul/li[7]/a")))
+                    
+                    driver.find_element_by_css_selector("#playerPriceAll_paginate > ul > li.next > a").click()
+                    
+                    
+            except: 
+                print ('Fail 1')
+                df.append(data, ignore_index=True)
+                break    
+            
+
+            element = WebDriverWait(driver, 50).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "#playerPriceAll tr"))
+                )
+            
+            while (driver.find_elements_by_xpath("//playerPriceAll[contains(text(),'Loading')]")):
+                driver.implicitly_wait(1)
+            driverRows = driver.find_elements_by_css_selector('#playerPriceAll tr')
+            
+            
             
             moreInfo = driverRows[i].find_element_by_tag_name('a').click()
-            #.find_element_by_tag_name('a').click()
+            
             
             
             try:
-                element = WebDriverWait(driver, 10).until(
+                element = WebDriverWait(driver, 50).until(
                     EC.presence_of_element_located((By.ID, "fixturetab"))
                 )
                 driver.find_element_by_id('fixturetab').click()
-                element = WebDriverWait(driver, 10).until(
+                element = WebDriverWait(driver, 50).until(
                     EC.presence_of_element_located((By.ID, "fixturetable"))
                 )
                 newSoup = BeautifulSoup(driver.page_source, 'lxml')
@@ -87,33 +138,30 @@ def fixScraper (EMAIL, PASSWORD):
 
                     
                     innerCols = innerTable.find_all("th")
-                    print(len(innerCols))
-                    for j in range (0,len(innerCols)):
-                        print (innerCols[j].getText())
-                        if innerCols[j].getText().contains('points'):
-                            print ('inside')
+                    
+                    for j in range(0,len(innerCols)):
+                        
+                        if 'points' in innerCols[j].getText():
+                            
                             innerColDict['Points'] = j
                             break
-                            
-                
+                    
                 for k in range (1, len(innerRows)):
-                    print ('HELLO2')
+                    
                     innerCells = innerRows[k].find_all("td")
-                    print(innerCells)
-                    print (colDict['Points'])
-                    data['week'+str(k)]=innerCells[colDict['Points']].getText().replace(' ','')
+                    
+                    data['week'+str(k)]=float(innerCells[innerColDict['Points']].getText().replace(' ',''))
                 
-                #element = WebDriverWait(driver, 10).until(
-                #    EC.presence_of_element_located((By.ID, "resultstable"))
-                #)  
-                #driver.back()
-                #time.sleep(5)
+                print (data)
+                df.append(data, ignore_index=True)
+                
             except:
-                
+                print ("ERROR")
                 driver.quit()
-            print (data)
-            return
-        return
+        page += 1
+        driver.quit()
+            
+    df.to_csv('out.csv', index=False)  
     driver.quit()
 
 
