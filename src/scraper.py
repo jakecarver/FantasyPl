@@ -126,6 +126,8 @@ def fixScraper (EMAIL, PASSWORD):
         soup = BeautifulSoup(driver.page_source, 'lxml')
         table = soup.find( id ='playerPriceAll')
         rows = table.select("tbody > tr")
+
+        
         #For every row
         for i in range (0, len(rows)):
 
@@ -162,10 +164,13 @@ def fixScraper (EMAIL, PASSWORD):
             #Wait for "loading" row to disappear
             while (driver.find_elements_by_xpath("//table[@id = 'playerPriceAll' and contains(text(),'Loading')]")):
                 driver.implicitly_wait(1)
+            
+            #Pretty sure the above line doesn't work so...
+            driver.implicitly_wait(5)
 
             #Open popup table
-            driverRows = driver.find_elements_by_css_selector('#playerPriceAll tr')
-            moreInfo = driverRows[i+1].find_element_by_tag_name('a').click()
+            driverRows = driver.find_elements_by_css_selector('#playerPriceAll> tbody > tr')
+            moreInfo = driverRows[i].find_element_by_tag_name('a').click()
 
             #Scraping the popup table
             try:
