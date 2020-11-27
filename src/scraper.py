@@ -170,6 +170,7 @@ def fixScraper (EMAIL, PASSWORD):
 
             #Open popup table
             driverRows = driver.find_elements_by_css_selector('#playerPriceAll> tbody > tr')
+            
             moreInfo = driverRows[i].find_element_by_tag_name('a').click()
 
             #Scraping the popup table
