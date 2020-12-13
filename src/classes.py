@@ -1,8 +1,10 @@
 import itertools
 import random
+import math
+import numpy
 class game:
     
-    def __init__(self, head, players):
+    def __init__(self,  players):
         self.players = players
         self.discount = 1
         self.discountList = []
@@ -22,7 +24,7 @@ class game:
             self.remainingValueQ.append(sorted(self.players, key=lambda x: sum([a*b for a, b in zip([y / (x.price) for y in x.scores[i:]],self.discountList[:int(6-i)])]), reverse=True))
 
 
-        self.head = head
+        self.head = None
 
         self.qs = [self.nextQ,self.remainingQ, self.nextValueQ, self.remainingValueQ]
     
@@ -44,29 +46,35 @@ class game:
         options = {}
         #Dictionary of number of players to add for relevent positions ({Midfielder = 10, Defender = 5)
         optionsCount = {}
-        for i in range(len(positions)):
+        
+        for i in positions:
             if i not in options:
-                options[positions[i]] = []
-                optionsCount[positions[i]] = 5
+                options[i] = []
+                optionsCount[i] = 5
             else:
-                optionsCount[positions[i]] += 5
+                optionsCount[i] += 5
         
         
         count = 0
+        
         while all(value > 0 for value in optionsCount.values()):
+            
             for q in self.qs:
                 if q[node.gameWeek+1][count].position in options.keys() :
                     if q[node.gameWeek+1][count] not in options[q[node.gameWeek+1][count].position] and optionsCount[q[node.gameWeek+1][count].position] > 0:
                         options[q[node.gameWeek+1][count].position].append(q[node.gameWeek+1][count])
                         optionsCount[q[node.gameWeek+1][count].position] -= 1
+                        if not all(value > 0 for value in optionsCount.values()):
+                            break
+                count+=1
         
         output = []
         curRoster = [x for x in node.players if x not in players]
         #Iterate through the first position
         for i in options[positions[0]]:
-            if len(positions>1):
+            if len(positions)>1:
                 for j in options[positions[1]]:
-                    if len(positions>2):
+                    if len(positions)>2:
                         for k in options[positions[2]]:
                             if k != j and j!= i and i!= k:
                                 outList = curRoster + [i,j,k]
@@ -99,6 +107,8 @@ class game:
     def branch(self, node):
         #add to children
         branches = []
+
+        #ADDS THE NO TRADE BRANCH
         branches.append(team(node.players, node.bank, node.gameWeek+1, node, node.score, node.fts))
 
         options = []
@@ -107,54 +117,111 @@ class game:
         mids = 0
         fwds = 0
         teamCount = {}
-        for h in branches.qs:
-            for i in h:
-                if i.position == 'Goalkeeper' :
+        for i in range (15):
+            #Fix later
+            for j in branches[0].qs:
+                
+                
+                if j[i].position == 'Goalkeeper' and j[i] not in options:
                     gls += 1
                     if gls < 2:
-                        options.append(i)
+                        options.append(j[i])
 
-                if i.position == 'Defender':
+                if j[i].position == 'Defender' and j[i] not in options:
                     defs += 1
                     if defs <4:
-                        options.append(i)
-                if i.position == 'Midfielder' :
+                        options.append(j[i])
+                if j[i].position == 'Midfielder' and j[i] not in options:
                     mids += 1
                     if mids < 3:
-                        options.append(i)
+                        options.append(j[i])
 
-                if i.position == 'Forward' :
+                if j[i].position == 'Forward' and j[i] not in options:
                     fwds += 1
                     if fwds < 2:
-                        options.append(i)
+                        options.append(j[i])
             
         for i in list(itertools.permutations(options,1)):
-            branches += findBest(self, node, players)
+            branches += self.findBest(node, i)
         
         for i in list(itertools.permutations(options,2)):
-            branches += findBest(self, node, players)
+            branches += self.findBest(node, i)
 
         for i in list(itertools.permutations(options,3)):
-            branches += findBest(self, node, players)
+            branches += self.findBest(node, i)
+        
+        saveList = sorted(branches, key=lambda x: x.score, reverse=True)[:20]
 
-        return sorted(branches, key=lambda x: x.scores[node.gameWeek+1], reverse=True)[:20]
+        saveList = sorted(saveList, key=lambda x: x.UCB, reverse=True)
+        
+        return saveList
     
+    def expansion(self, node):
+        node.children = self.branch(node)
+        
+
     #recursive
     def selection (self, node):
+        if len(node.children) == 0:
+            
+            return node
+        node.children = sorted(node.children, key=lambda x: x.UCB, reverse=True)
+        return self.selection(node.children[0])
         
-        pass
 
-    def expansion (self, node):
-        options = self.branch(node)
-        pass
+    
 
     def simulation (self, node):
-        pass
+        if node.gameWeek == 5:
+            return node.score
+        random.seed()
+        
+        nextList = self.branch(node)
+        rand = random.randint(0, len(nextList)-1)
+        nextNode = nextList[rand]
+        return self.simulation(nextNode)
 
+    
 
+    def backProp (self, node, score):
+        node.update(score)
+        if node.parent == None:
+            return
+        
+        #Fill function next time
+        self.backProp(node.parent)
 
-    def monteCarlo(self, reps):
-        branch(self.head)
+    def monteCarlo(self, head, reps):
+        
+        self.head = head
+        for i in range (reps):
+            leaf = self.selection(self.head)
+            self.expansion(leaf)
+            score = self.simulation(leaf)
+            self.backProp(leaf, score)
+            print (i)
+            print(head.best)
+        cur = self.head
+        print(cur.children)
+        while len(cur.children)>0:
+            cur = sorted(cur.children, key=lambda x: x.best, reverse=True)[0]
+            #-1 FOR SOME REASON
+            print(cur.best)
+            print("Starting: ")
+            for i in cur.starting:
+
+                print(i.name)
+                print(i.position)
+                print(i.scores[cur.gameWeek])
+
+            print("Bench: ")
+            for i in cur.bench:
+
+                print(i.name)
+                print(i.position)
+                print(i.scores[cur.gameWeek])
+        return cur
+        
         
 
         
@@ -212,7 +279,17 @@ class team:
         self.nextValueQ = []
         self.remainingValueQ = []
         self.fts = min(fts + 1, 2)
+
+        self.discount = 1
+        self.discountList = []
+        for i in range (6):
+            self.discountList.append(self.discount^i)
         
+        self.visits = 0
+        self.runningMean = 9999
+        self.best = -1
+        self.UCB = 9999
+        self.bias = 1
 
         self.gameWeek = gameWeek
         self.bank = bank
@@ -229,13 +306,32 @@ class team:
         self.parent = parent
 
 
-        #These are ASCENDING
-        self.nextQ.append( sorted(self.players, key=lambda x: x.scores[gameWeek], reverse=False))
-        self.remainingQ.append(sorted(self.players, key=lambda x: sum([a*b for a, b in zip(x.scores[gameWeek:],self.discountList[:int(6-gameWeek)])]), reverse=False))
-        self.nextValueQ.append(sorted(self.players, key=lambda x: (x.scores[gameWeek]/(x.price)), reverse=False))
-        self.remainingValueQ.append(sorted(self.players, key=lambda x: sum([a*b for a, b in zip([y / (x.price) for y in x.scores[gameWeek:]],self.discountList[:int(6-gameWeek)])]), reverse=False))
+        self.nextQ = []
+        self.remainingQ = []
+        self.nextValueQ = []
+        self.remainingValueQ = []
 
-        self.qs = [nextQ,remainingQ,nextValueQ,remainingValueQ]
+        #These are ASCENDING
+        self.nextQ  =sorted(self.players, key=lambda x: x.scores[gameWeek], reverse=False)
+        self.remainingQ= sorted(self.players, key=lambda x: sum([a*b for a, b in zip(x.scores[gameWeek:],self.discountList[:int(6-gameWeek)])]), reverse=False)
+        self.nextValueQ =sorted(self.players, key=lambda x: (x.scores[gameWeek]/(x.price)), reverse=False)
+        self.remainingValueQ=sorted(self.players, key=lambda x: sum([a*b for a, b in zip([y / (x.price) for y in x.scores[gameWeek:]],self.discountList[:int(6-gameWeek)])]), reverse=False)
+
+        self.qs = [self.nextQ,self.remainingQ,self.nextValueQ,self.remainingValueQ]
+
+    def update(self, newScore):
+        if self.runningMean == 9999:
+            self.runningMean = newScore
+            self.visits = 1
+        else:
+            self.visits += 1
+            self.runningMean = ((self.runningMean*(self.visits-1))+newScore)/self.visits
+        
+        if self.parent is not None:
+            self.UCB = self.runningMean + (self.bias*math.sqrt(numpy.log(self.parent.visits+1)/self.visits))
+
+        if self.best == -1 or newScore>self.best:
+            self.best = newScore
 
 
     def verify(self):
@@ -246,7 +342,7 @@ class team:
         fwds = 0
         teamCount = {}
 
-        if bank < 0:
+        if self.bank < 0:
             return False
         for i in self.players:
             if i.team in teamCount:

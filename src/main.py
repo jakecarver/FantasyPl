@@ -43,7 +43,7 @@ for i in model.nextQ[0]:
         break
         
 
-var = classes.team(teamList, .5, 0, None, 0)
+var = classes.team(teamList, .5, 0, None, 0,0)
 print("STARTERS")
 for i in var.starting:
 
@@ -59,3 +59,7 @@ for i in var.bench:
     print(i.name)
     print(i.position)
     print(i.scores[0])
+
+#FIND WAY TO UPDATE INITIL LINEUP
+#ENSURE THAT WE REACH BOTTOM OF TREE
+model.monteCarlo(var, 3)
