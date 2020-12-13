@@ -57,11 +57,12 @@ class game:
         
         count = 0
         
+        #Choosing best potential trades
         while all(value > 0 for value in optionsCount.values()):
             
             for q in self.qs:
                 if q[node.gameWeek+1][count].position in options.keys() :
-                    if q[node.gameWeek+1][count] not in options[q[node.gameWeek+1][count].position] and optionsCount[q[node.gameWeek+1][count].position] > 0:
+                    if q[node.gameWeek+1][count] not in options[q[node.gameWeek+1][count].position] and optionsCount[q[node.gameWeek+1][count].position] > 0 and options[q[node.gameWeek+1][count]] not in node.players:
                         options[q[node.gameWeek+1][count].position].append(q[node.gameWeek+1][count])
                         optionsCount[q[node.gameWeek+1][count].position] -= 1
                         if not all(value > 0 for value in optionsCount.values()):
@@ -70,6 +71,7 @@ class game:
         
         output = []
         curRoster = [x for x in node.players if x not in players]
+        
         #Iterate through the first position
         for i in options[positions[0]]:
             if len(positions)>1:
@@ -77,6 +79,7 @@ class game:
                     if len(positions)>2:
                         for k in options[positions[2]]:
                             if k != j and j!= i and i!= k:
+                                
                                 outList = curRoster + [i,j,k]
                                 output.append(team(outList, money, node.gameWeek+1, node, node.score, node.fts))
                     else:
@@ -85,7 +88,6 @@ class game:
                             output.append(team(outList, money, node.gameWeek+1, node, node.score, node.fts))
 
             else:
-                
                 outList = curRoster + [i]
                 output.append(team(outList, money, node.gameWeek+1, node, node.score, node.fts))
         
@@ -110,7 +112,12 @@ class game:
 
         #ADDS THE NO TRADE BRANCH
         branches.append(team(node.players, node.bank, node.gameWeek+1, node, node.score, node.fts))
+        print("GAMEWEEK: ",node.gameWeek)
+        for i in node.players:
 
+            print(i.name)
+            print(i.position)
+            print(i.scores[0])
         options = []
         gls = 0
         defs = 0
@@ -120,7 +127,9 @@ class game:
         for i in range (15):
             #Fix later
             for j in branches[0].qs:
-                
+                #print("Length: ", len(j))
+                #print(i)
+                #print (j)
                 
                 if j[i].position == 'Goalkeeper' and j[i] not in options:
                     gls += 1
@@ -189,7 +198,7 @@ class game:
             return
         
         #Fill function next time
-        self.backProp(node.parent)
+        self.backProp(node.parent, score)
 
     def monteCarlo(self, head, reps):
         
@@ -239,7 +248,7 @@ class player:
         self.scores = scores
         self.price = price
         self.visitCount = 1
-    def __hash__(self, other):
+    def __hash__(self):
         return hash(self.name, self.team)
 
     def __eq__(self, other):
