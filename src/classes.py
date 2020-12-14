@@ -42,6 +42,9 @@ class game:
         for i in players:
             money += i.price
             positions.append(i.position)
+        
+
+        fts = min(node.fts+1-len(players),2)
         #Dictionary of players for relevent positions ({Midfielder = {}, Defender = {}})
         options = {}
         #Dictionary of number of players to add for relevent positions ({Midfielder = 10, Defender = 5)
@@ -62,7 +65,8 @@ class game:
             
             for q in self.qs:
                 if q[node.gameWeek+1][count].position in options.keys() :
-                    if q[node.gameWeek+1][count] not in options[q[node.gameWeek+1][count].position] and optionsCount[q[node.gameWeek+1][count].position] > 0 and options[q[node.gameWeek+1][count]] not in node.players:
+                    #Check if statement
+                    if q[node.gameWeek+1][count] not in options[q[node.gameWeek+1][count].position] and optionsCount[q[node.gameWeek+1][count].position] > 0  and q[node.gameWeek+1][count] not in node.players:
                         options[q[node.gameWeek+1][count].position].append(q[node.gameWeek+1][count])
                         optionsCount[q[node.gameWeek+1][count].position] -= 1
                         if not all(value > 0 for value in optionsCount.values()):
@@ -81,15 +85,23 @@ class game:
                             if k != j and j!= i and i!= k:
                                 
                                 outList = curRoster + [i,j,k]
-                                output.append(team(outList, money, node.gameWeek+1, node, node.score, node.fts))
+                                newTeam = team(outList, money, node.gameWeek+1, node, node.score-hit, fts)
+                                if newTeam.verify():
+                                    
+                                    output.append(newTeam)
                     else:
                         if j!= i :
                             outList = curRoster + [i,j]
-                            output.append(team(outList, money, node.gameWeek+1, node, node.score, node.fts))
-
+                            newTeam = team(outList, money, node.gameWeek+1, node, node.score-hit, fts)
+                            if newTeam.verify():
+                                    
+                                output.append(newTeam)
             else:
                 outList = curRoster + [i]
-                output.append(team(outList, money, node.gameWeek+1, node, node.score, node.fts))
+                newTeam = team(outList, money, node.gameWeek+1, node, node.score-hit, fts)
+                if newTeam.verify():
+                                    
+                    output.append(newTeam)
         
         return output
         
@@ -112,12 +124,10 @@ class game:
 
         #ADDS THE NO TRADE BRANCH
         branches.append(team(node.players, node.bank, node.gameWeek+1, node, node.score, node.fts))
-        print("GAMEWEEK: ",node.gameWeek)
-        for i in node.players:
+        #print("GAMEWEEK: ",node.gameWeek)
+        #for i in node.players:
 
-            print(i.name)
-            print(i.position)
-            print(i.scores[0])
+        #    print(i.name, "---",i.position,"---",i.scores[node.gameWeek])
         options = []
         gls = 0
         defs = 0
@@ -166,7 +176,11 @@ class game:
         return saveList
     
     def expansion(self, node):
-        node.children = self.branch(node)
+        if node.gameWeek != 5 and node.gameWeek != 4:
+            node.children = self.branch(node)
+            #New Addition
+        elif node.gameWeek == 4:
+            node.children = [sorted(self.branch(node), key=lambda x: x.score, reverse=True)[0]]
         
 
     #recursive
@@ -207,28 +221,34 @@ class game:
             leaf = self.selection(self.head)
             self.expansion(leaf)
             score = self.simulation(leaf)
+            print(score)
             self.backProp(leaf, score)
-            print (i)
-            print(head.best)
+            if leaf.parent is not None:
+                print ("REP: ",i,"--- BEST: ",self.head.best, "--- LEVEL: ", leaf.gameWeek,"--- PARENT UCB: ", leaf.parent.UCB)
+            else: 
+                print ("REP: ",i,"--- BEST: ",self.head.best, "--- LEVEL: ", leaf.gameWeek)
         cur = self.head
-        print(cur.children)
+        print("INITIAL PLAYERS")
+        for i in cur.players:
+
+            print(i.name)
+            print(i.position)
+            print(i.scores[0])
         while len(cur.children)>0:
             cur = sorted(cur.children, key=lambda x: x.best, reverse=True)[0]
             #-1 FOR SOME REASON
             print(cur.best)
+            print("GAMEWEEK: ",cur.gameWeek)
             print("Starting: ")
             for i in cur.starting:
 
-                print(i.name)
-                print(i.position)
-                print(i.scores[cur.gameWeek])
+                print(i.name, "---",i.team,"---",i.position,"---",i.scores[cur.gameWeek])
+                
 
             print("Bench: ")
             for i in cur.bench:
-
-                print(i.name)
-                print(i.position)
-                print(i.scores[cur.gameWeek])
+                print(i.name, "---",i.team,"---",i.position,"---",i.scores[cur.gameWeek])
+            
         return cur
         
         
@@ -249,7 +269,7 @@ class player:
         self.price = price
         self.visitCount = 1
     def __hash__(self):
-        return hash(self.name, self.team)
+        return hash(self.name + self.team)
 
     def __eq__(self, other):
         return ((self.name, self.team) == (other.name, other.team))
@@ -310,7 +330,10 @@ class team:
         self.bench = []
         self.optimize()
         self.valid = self.verify()
-        self.score = score + sum(i.scores[gameWeek] for i in self.starting)
+        if gameWeek > -1:
+            self.score = score + sum(i.scores[gameWeek] for i in self.starting)
+        else:
+            self.score = 0
         self.children = []
         self.parent = parent
 
@@ -336,15 +359,25 @@ class team:
             self.visits += 1
             self.runningMean = ((self.runningMean*(self.visits-1))+newScore)/self.visits
         
-        if self.parent is not None:
-            self.UCB = self.runningMean + (self.bias*math.sqrt(numpy.log(self.parent.visits+1)/self.visits))
+        
 
-        if self.best == -1 or newScore>self.best:
+        if self.parent is not None and self.visits > 5 and self.UCB != -1:
+            self.UCB = self.runningMean + (self.bias*math.sqrt(numpy.log(self.parent.visits+1)/self.visits))
+        
+        
+        #experiment with
+        else:
+            sortBest = sorted(self.children, key=lambda x: x.UCB, reverse=True)[0]
+            if sortBest == -1:
+                UCB = -1
+            else:
+                self.UCB = self.runningMean + 6-self.visits
+        if newScore>self.best:
             self.best = newScore
 
 
     def verify(self):
-        verify = True
+        
         gls = 0
         defs = 0
         mids = 0
@@ -364,24 +397,27 @@ class team:
             if i.position == 'Goalkeeper' :
                 gls += 1
                 if gls > 2:
-                    verify = False
+                    return False
 
             if i.position == 'Defender':
                 defs += 1
                 if defs > 5:
-                    verify = False
+                    return False
             if i.position == 'Midfielder':
                 mids += 1
                 if mids > 5:
-                    verify = False
+                    return False
 
             if i.position == 'Forward' :
                 fwds += 1
                 if fwds > 3:
-                    verify = False
+                    return False
+        return True
                 
 
     def optimize(self):
+        if self.gameWeek == -1:
+            return
         sortList = sorted(self.players, key=lambda x: x.scores[self.gameWeek], reverse=True)
         
         gls = 0
