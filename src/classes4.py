@@ -2,6 +2,18 @@ import itertools
 import random
 import math
 import numpy
+import pandas as pd
+import csv
+import copy
+'''
+BASE CLASS:
+
+Bias: .6
+
+UCB Buffer: 5
+'''
+
+
 class game:
     
     def __init__(self,  players):
@@ -214,27 +226,50 @@ class game:
         #Fill function next time
         self.backProp(node.parent, score)
 
-    def monteCarlo(self, head, reps):
+    def monteCarlo(self, head, reps, name):
         
         self.head = head
+        bests = []
+        scores = []
         for i in range (reps):
             leaf = self.selection(self.head)
             self.expansion(leaf)
             score = self.simulation(leaf)
             print(score)
             self.backProp(leaf, score)
+
             if leaf.parent is not None:
                 print ("REP: ",i,"--- BEST: ",self.head.best, "--- LEVEL: ", leaf.gameWeek,"--- PARENT UCB: ", leaf.parent.UCB)
             else: 
                 print ("REP: ",i,"--- BEST: ",self.head.best, "--- LEVEL: ", leaf.gameWeek)
+
+            #Evolution of the best all time score
+            bests.append([head.best])
+
+            #Most recent best
+            scores.append([leaf.best])
+        with open(name+"bests.csv", "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerows(bests)
+        with open(name+"scores.csv", "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerows(scores)
         cur = self.head
+        
+
+        rosters = []
+
+        thisRoster = []
         print("INITIAL PLAYERS")
         for i in cur.players:
 
             print(i.name)
+            thisRoster.append(i.name)
             print(i.position)
             print(i.scores[0])
+        rosters.append(copy.copy(thisRoster))
         while len(cur.children)>0:
+            thisRoster = []
             cur = sorted(cur.children, key=lambda x: x.best, reverse=True)[0]
             #-1 FOR SOME REASON
             print(cur.best)
@@ -243,11 +278,18 @@ class game:
             for i in cur.starting:
 
                 print(i.name, "---",i.team,"---",i.position,"---",i.scores[cur.gameWeek])
-                
+                thisRoster.append(i.name)
 
             print("Bench: ")
             for i in cur.bench:
                 print(i.name, "---",i.team,"---",i.position,"---",i.scores[cur.gameWeek])
+                thisRoster.append(i.name)
+
+            rosters.append(copy.copy(thisRoster))
+
+        with open(name+"rosters.csv", "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerows(rosters)
             
         return cur
         
@@ -318,7 +360,7 @@ class team:
         self.runningMean = 9999
         self.best = -1
         self.UCB = 9999
-        self.bias = 1
+        self.bias = .6
 
         self.gameWeek = gameWeek
         self.bank = bank
