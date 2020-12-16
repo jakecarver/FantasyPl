@@ -97,20 +97,20 @@ class game:
                             if k != j and j!= i and i!= k:
                                 
                                 outList = curRoster + [i,j,k]
-                                newTeam = team(outList, money, node.gameWeek+1, node, node.score-hit, fts)
+                                newTeam = team(outList, money-k.price-j.price-i.price, node.gameWeek+1, node, node.score-hit, fts)
                                 if newTeam.verify():
                                     
                                     output.append(newTeam)
                     else:
                         if j!= i :
                             outList = curRoster + [i,j]
-                            newTeam = team(outList, money, node.gameWeek+1, node, node.score-hit, fts)
+                            newTeam = team(outList, money-i.price-j.price, node.gameWeek+1, node, node.score-hit, fts)
                             if newTeam.verify():
                                     
                                 output.append(newTeam)
             else:
                 outList = curRoster + [i]
-                newTeam = team(outList, money, node.gameWeek+1, node, node.score-hit, fts)
+                newTeam = team(outList, money-i.price, node.gameWeek+1, node, node.score-hit, fts)
                 if newTeam.verify():
                                     
                     output.append(newTeam)
@@ -409,9 +409,11 @@ class team:
         
         #experiment with
         else:
-            sortBest = sorted(self.children, key=lambda x: x.UCB, reverse=True)[0]
-            if sortBest == -1:
-                UCB = -1
+            if len(self.children) > 0:
+                sortBest = sorted(self.children, key=lambda x: x.UCB, reverse=True)[0]
+                if sortBest == -1:
+                    UCB = -1
+                self.UCB = self.runningMean + 6-self.visits
             else:
                 self.UCB = self.runningMean + 6-self.visits
         if newScore>self.best:

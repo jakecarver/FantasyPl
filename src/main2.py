@@ -24,5 +24,5 @@ var = classes2.team(players, .5, -1, None, 0,0)
 
 #FIND WAY TO UPDATE INITIL LINEUP
 #ENSURE THAT WE REACH BOTTOM OF TREE
-model.monteCarlo(var, 5000, sys.argv[2])
+model.monteCarlo(var, 1000, sys.argv[2])
 
